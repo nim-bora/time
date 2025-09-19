@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Time Tracker</title>
+    <link rel="stylesheet" href="style.css">
+    
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.3.0/firebase-auth-compat.js"></script>
+
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <!-- Custom Popup -->
+    <div id="popup" class="popup hidden">
+        <div class="popup-content">
+            <span class="popup-close">&times;</span>
+            <div class="popup-icon"></div>
+            <p class="popup-message"></p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Employee Interface -->
+        <div id="employee-view" class="view hidden">
+            <div class="employee-header">
+                <h1>Employee Time Tracker</h1>
+                <div class="employee-id"></div>
+            </div>
+            
+            <!-- Time Tracking Buttons -->
+            <div id="time-tracking" class="time-tracking">
+                <div class="tracking-grid">
+                    <button class="btn btn--primary btn--lg tracking-btn" data-action="Time In">
+                        <span class="btn-icon">🕐</span>
+                        Time In
+                    </button>
+                    <button class="btn btn--primary btn--lg tracking-btn" data-action="Break Start">
+                        <span class="btn-icon">☕</span>
+                        Break Start
+                    </button>
+                    <button class="btn btn--primary btn--lg tracking-btn" data-action="Break End">
+                        <span class="btn-icon">🔄</span>
+                        Break End
+                    </button>
+                    <button class="btn btn--primary btn--lg tracking-btn" data-action="Time Out">
+                        <span class="btn-icon">🏠</span>
+                        Time Out
+                    </button>
+                </div>
+                <button class="btn btn--secondary btn--lg view-history-btn">
+                    📊 View My History
+                </button>
+            </div>
+
+            <!-- Employee History -->
+            <div id="employee-history" class="employee-history hidden">
+                <div class="history-header">
+                    <button class="btn btn--secondary back-btn">← Back to Time Tracking</button>
+                    <h2>My Time History</h2>
+                </div>
+                <div class="history-summary">
+                    <div class="card">
+                        <div class="card__body">
+                            <h3>Total Hours Worked</h3>
+                            <div class="total-hours">0.00 hours</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="history-table-container">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Action</th>
+                                <th>Time</th>
+                                <th>Location</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Login -->
+        <div id="admin-login" class="view">
+            <div class="login-container">
+                <div class="card">
+                    <div class="card__body">
+                        <h1>Admin Login</h1>
+                        <form id="login-form">
+                            <div class="form-group">
+                                <label class="form-label" for="admin-password">Password</label>
+                                <input type="password" id="admin-password" class="form-control" required>
+                            </div>
+                            <button type="submit" class="btn btn--primary btn--full-width">Login</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin-dashboard" class="view hidden">
+            <div class="admin-header">
+                <h1>Admin Dashboard</h1>
+                <button class="btn btn--secondary logout-btn">Logout</button>
+            </div>
+
+            <!-- Admin Tabs -->
+            <div class="tab-container">
+                <div class="tab-nav">
+                    <button class="tab-btn active" data-tab="employees">👥 Employees</button>
+                    <button class="tab-btn" data-tab="schedules">📅 Schedules</button>
+                    <button class="tab-btn" data-tab="logs">📋 Time Logs</button>
+                    <button class="tab-btn" data-tab="alerts">⚠️ Alerts</button>
+                    <button class="tab-btn" data-tab="reports">📊 Reports</button>
+                </div>
+
+                <!-- Employees Tab -->
+                <div id="employees-tab" class="tab-content active">
+                    <div class="tab-section">
+                        <h2>Add New Employee</h2>
+                        <form id="employee-form" class="employee-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label class="form-label" for="emp-id">Employee ID</label>
+                                    <input type="text" id="emp-id" class="form-control" placeholder="EMP-XXX" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="first-name">First Name</label>
+                                    <input type="text" id="first-name" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="last-name">Last Name</label>
+                                    <input type="text" id="last-name" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="phone">Phone</label>
+                                    <input type="tel" id="phone" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label" for="email">Email</label>
+                                    <input type="email" id="email" class="form-control" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn--primary">Add Employee</button>
+                        </form>
+                    </div>
+
+                    <div class="tab-section">
+                        <h2>Employee List</h2>
+                        <div class="employee-list">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employees-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schedules Tab -->
+                <div id="schedules-tab" class="tab-content">
+                    <div class="schedule-subtabs">
+                        <button class="subtab-btn active" data-subtab="enter">Enter Schedule</button>
+                        <button class="subtab-btn" data-subtab="view">View Schedule</button>
+                    </div>
+
+                    <!-- Enter Schedule -->
+                    <div id="enter-schedule" class="subtab-content active">
+                        <div class="schedule-controls">
+                            <div class="form-group">
+                                <label class="form-label" for="schedule-employee">Employee</label>
+                                <select id="schedule-employee" class="form-control">
+                                    <option value="">Select Employee</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="schedule-week">Week Starting</label>
+                                <input type="date" id="schedule-week" class="form-control">
+                            </div>
+                            <button class="btn btn--secondary load-schedule-btn">Load Schedule</button>
+                        </div>
+
+                        <div class="schedule-table-container">
+                            <table class="schedule-table">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Not Working</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="schedule-table-body"></tbody>
+                            </table>
+                            <div class="schedule-actions">
+                                <button class="btn btn--secondary copy-schedule-btn">Copy to All Working Days</button>
+                                <button class="btn btn--primary save-schedule-btn">Save Schedule</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- View Schedule -->
+                    <div id="view-schedule" class="subtab-content">
+                        <div class="schedule-controls">
+                            <div class="form-group">
+                                <label class="form-label" for="view-schedule-employee">Employee</label>
+                                <select id="view-schedule-employee" class="form-control">
+                                    <option value="">Select Employee</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="view-schedule-week">Week Starting</label>
+                                <input type="date" id="view-schedule-week" class="form-control">
+                            </div>
+                            <button class="btn btn--secondary view-schedule-btn">View Schedule</button>
+                        </div>
+
+                        <div class="schedule-display">
+                            <table class="schedule-table">
+                                <thead>
+                                    <tr>
+                                        <th>Day</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="view-schedule-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Logs Tab -->
+                <div id="logs-tab" class="tab-content">
+                    <h2>Time Logs</h2>
+                    <div class="logs-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Action</th>
+                                    <th>Timestamp</th>
+                                    <th>Location</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Alerts Tab -->
+                <div id="alerts-tab" class="tab-content">
+                    <h2>Alerts</h2>
+                    <div class="alerts-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Employee ID</th>
+                                    <th>Alert Type</th>
+                                    <th>Message</th>
+                                    <th>Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody id="alerts-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Reports Tab -->
+                <div id="reports-tab" class="tab-content">
+                    <h2>Weekly Reports</h2>
+                    <div class="report-controls">
+                        <div class="form-group">
+                            <label class="form-label" for="report-week">Week Starting</label>
+                            <input type="date" id="report-week" class="form-control">
+                        </div>
+                        <button class="btn btn--primary generate-report-btn">Generate Report</button>
+                    </div>
+                    <div class="report-container">
+                        <div id="report-content"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
